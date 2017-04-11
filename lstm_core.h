@@ -2,7 +2,7 @@
 #define lstm_core_h
 
 #include <cmath>
-#include "lib/Eigen/Dense"
+#include "Eigen/Dense"
 
 typedef Eigen::VectorXf Vector;
 typedef Eigen::MatrixXf Matrix;
@@ -48,6 +48,11 @@ Layer lstm_layer(const uint32_t num_input, const uint32_t num_cells)
     layer.b.segment(2 * num_cells, num_cells) = Vector::Constant(num_cells, 5);
 
     return layer;
+}
+
+auto lstm_output(const Vector &state) -> decltype(state.segment(5 * state.size() / 6, state.size() / 6))
+{
+    return state.segment(5 * state.size() / 6, state.size() / 6);
 }
 
 void tanh(Vector &v)

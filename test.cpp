@@ -4,6 +4,9 @@ int main(void)
 {
     Layer L = lstm_layer(2, 1);
     Vector state1 = lstm_state(1);
+    Vector o = lstm_output(state1);
+    return o[0];
+
     Vector x(2);
     x << 1, 0.5;
     Vector state2 = lstm_state(1);

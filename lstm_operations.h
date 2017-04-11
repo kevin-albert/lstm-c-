@@ -3,9 +3,6 @@
 
 #include "lstm_core.h"
 
-#define lstm_output(state) state.segment(5 * state.size() / 6, state.size() / 6)
-
-#include <iostream>
 void lstm_forwardpass(const Layer &l,
                       const Vector &state1,
                       const Vector &x,
@@ -37,7 +34,6 @@ void lstm_forwardpass(const Layer &l,
     // c = a .* i + cp .* f;
     state2.segment(4 * nc, nc) = state2.segment(0 * nc, nc).array() * state2.segment(1 * nc, nc).array() +
                                  state1.segment(4 * nc, nc).array() * state2.segment(2 * nc, nc).array();
-    std::cout << "c: " << state2.segment(4 * nc, nc) << "\n";
 
     // h = tanh(c) .* o;
     state2.segment(5 * nc, nc) = state2.segment(4 * nc, nc).array().tanh() * state2.segment(3 * nc, nc).array();

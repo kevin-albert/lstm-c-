@@ -1,12 +1,14 @@
-CXXFLAGS= -Ofast --std=c++11 -msse2 -march=native -I./lib
+CXXFLAGS= -Ofast --std=c++11 -msse2 -march=native -I./lib -c
 LD  = c++
 LDFLAGS	=
 
 test: test.o
 	$(LD) $(LDFLAGS) $^ -o $@
-	./test
 
-test.o: test.cpp lstm_operations.h lstm_core.h
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $^ -o $@ 
+
+test.cpp: lstm_operations.h lstm_core.h
 
 clean: 
-	rm -f *.o $(EXE)
+	rm -f *.o test
