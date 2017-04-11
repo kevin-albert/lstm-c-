@@ -2,6 +2,7 @@
 #include <iostream>
 int main(void)
 {
+    std::cout << "n=" << Eigen::nbThreads() << "\n";
     Layer L = lstm_layer(80, 500);
     Vector state = lstm_state(500);
     Vector x = Vector::Random(80);

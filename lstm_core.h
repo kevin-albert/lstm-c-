@@ -55,16 +55,16 @@ auto lstm_output(const Vector &state) -> decltype(state.segment(5 * state.size()
     return state.segment(5 * state.size() / 6, state.size() / 6);
 }
 
-void tanh(Vector &v)
-{
-    for (uint32_t i = 0; i < v.size(); ++i)
-        v.data()[i] = std::tanhf(v.data()[i]);
-}
+// void tanh(Vector &v)
+// {
+//     for (uint32_t i = 0; i < v.size(); ++i)
+//         v.data()[i] = std::tanhf(v.data()[i]);
+// }
 
-void lsig(Vector &v)
-{
-    for (uint32_t i = 0; i < v.size(); ++i)
-        v.data()[i] = (1.0F + tanhf(v.data()[i] / 2)) / 2;
-}
+// void lsig(Vector &v)
+// {
+//     for (uint32_t i = 0; i < v.size(); ++i)
+//         v.data()[i] = (1.0F + tanhf(v.data()[i] / 2)) / 2;
+// }
 
 #endif
