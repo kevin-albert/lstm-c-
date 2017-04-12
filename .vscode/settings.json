@@ -26,6 +26,7 @@
         "cstdint": "cpp",
         "type_traits": "cpp",
         "typeinfo": "cpp",
-        "dense": "cpp"
+        "dense": "cpp",
+        "fstream": "cpp"
     }
 }

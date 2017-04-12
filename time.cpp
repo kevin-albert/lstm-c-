@@ -3,16 +3,18 @@
 int main(void)
 {
     std::cout << "n=" << Eigen::nbThreads() << "\n";
-    Layer L = lstm_layer(80, 500);
-    Vector state = lstm_state(500);
-    Vector x = Vector::Random(80);
-    Vector dx = Vector::Zero(80);
-    Vector dh = Vector::Random(500);
-    Vector d = lstm_state(500);
+    int ni = 100;
+    int nc = 2000;
+    Layer L = lstm_layer(ni, nc);
+    Vector state = lstm_state(nc);
+    Vector x = Vector::Random(ni);
+    Vector dx = Vector::Zero(ni);
+    Vector dh = Vector::Random(nc);
+    Vector d = lstm_state(nc);
 
-    Matrix dW = Matrix::Zero(4 * 500, 80 + 500);
+    Matrix dW = Matrix::Zero(4 * nc, ni + nc);
 
-    for (int i = 0; i < 5000; ++i)
+    for (int i = 0; i < 100; ++i)
     {
         lstm_backwardpass(L, state, x, state, dh, dW, d, dx);
     }
