@@ -27,6 +27,8 @@
         "type_traits": "cpp",
         "typeinfo": "cpp",
         "dense": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "string": "cpp",
+        "random": "cpp"
     }
 }
