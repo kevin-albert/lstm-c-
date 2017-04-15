@@ -19,10 +19,10 @@ LDFLAGS	= -llapack -lblas -fopenmp -mfma -framework Accelerate -Wa,-q \
 	-lm -ldl 
 
 
-CXX = g++-6
-CXXFLAGS= -O2 --std=c++17 -c -I./lib
-LD  = g++-6
-LDFLAGS	= 
+#CXX = g++-6
+#CXXFLAGS= -O2 --std=c++17 -c -I./lib
+#LD  = g++-6
+#LDFLAGS	= 
 
 
 main: main.o text_mapper.o rng.o lstm.o read_data.o 

@@ -31,7 +31,7 @@ void print_usage_train(const char *execname);
 void print_usage_sample(const char *execname);
 
 //
-// MAIN
+// main
 // parse argv
 // dispatch command function - init(), train(), sample()
 //
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
 
 //
 //
-// INIT
+// init
 //
 //
 
@@ -251,7 +251,7 @@ void init(const int epochs,        // -e
 
 //
 //
-// TRAIN
+// train
 //
 //
 
@@ -357,13 +357,13 @@ void train(const std::string &checkpoint_file, const std::string &data_file)
               << "learning rate         " << rate << "\n"
               << "momentum              " << momentum << "\n"
               << "learning rate decay   " << rate_decay << "\n"
-              << "hidden layer size     " << num_cells << "\n";
+              << "hidden layer size     " << num_cells << "\n"
+              << "input/output size     " << mapper.num_classes() << "\n";
 
     // loop through epochs
     while (epoch < epochs)
     {
-        if (file == 0)
-            std::cout << "Epoch " << epoch << "\n";
+        std::cout << "Epoch " << epoch << "\n";
 
         double decayed_rate = rate * std::pow(rate_decay, epoch);
 
@@ -413,6 +413,7 @@ void train(const std::string &checkpoint_file, const std::string &data_file)
                     lstm_forwardpass(L2, states2[idx], lstm_output(states1[idx_next]), states2[idx_next]);
                     lstm_forwardpass(L3, states3[idx], lstm_output(states2[idx_next]), states3[idx_next]);
                     outputs[idx] = Wyh * lstm_output(states3[idx_next]) + by;
+
                     idx = idx_next;
                 }
 
@@ -434,6 +435,14 @@ void train(const std::string &checkpoint_file, const std::string &data_file)
                     mapper.to_onehot((*chunk)[i], x);
                     mapper.to_onehot((*chunk)[i + 1], y_);
                     error += softmax_cross_entropy_onehot(y_, outputs[idx], p, dy);
+                    int k = 0;
+                    for (int j = 1; j < p.size(); ++j)
+                    {
+                        if (p[j] > p[k])
+                        {
+                            k = j;
+                        }
+                    }
                     dh = Wyh.transpose() * dy;
 
                     lstm_backwardpass(has_next, L3, states3[idx_next], lstm_output(states2[idx_next]), states3[idx], dh, D3, dh);
@@ -450,23 +459,20 @@ void train(const std::string &checkpoint_file, const std::string &data_file)
                     gWyh += dy * lstm_output(states3[idx_next]).transpose();
                     gy += dy;
                 }
-
                 if (seq_offset == sample)
                 {
-                    std::cout << "y: ";
-                    int j = idx;
+                    std::cout << "sample:   \"";
                     for (int i = seq_offset + 1; i < seq_end; ++i)
                     {
-                        char c = mapper.from_onehot(outputs[j]);
-                        std::cout << c;
-                        j = (j + 1) % (seq_length);
+                        std::cout << mapper.from_onehot(outputs[idx]);
+                        idx = (idx + 1) % (seq_length);
                     }
-                    std::cout << "\n";
+                    std::cout << "\"\n";
                 }
 
                 seq_offset += seq_length;
 
-                optimize::nesterov(decayed_rate, momentum,
+                optimize::nesterov(rate, momentum,
                                    // layer 1
                                    L1.W, G1.W, M1.W,
                                    L1.b, G1.b, M1.b,
@@ -485,8 +491,6 @@ void train(const std::string &checkpoint_file, const std::string &data_file)
             }
 
             error /= chunk->size();
-            if (file == 0)
-                std::cout << "[" << file << "] error: " << error << "\n";
 
             ++file;
             if (file < order.size())
@@ -557,7 +561,7 @@ void train(const std::string &checkpoint_file, const std::string &data_file)
 
 //
 //
-// SAMPLE
+// sample
 //
 //
 void sample(const int n, const double temp, const std::string &checkpoint_file, const std::string &data_file)
