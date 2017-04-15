@@ -1,5 +1,5 @@
 CXX = g++-6
-CXXFLAGS= -Ofast --std=c++17 -c -I./lib \
+CXXFLAGS= -Ofast --std=c++17 -c -I./lib -g \
     -msse2 -march=native \
     -mfma -fopenmp \
     -DMKL_LP64 -I/opt/intel/mkl/include \
@@ -7,7 +7,7 @@ CXXFLAGS= -Ofast --std=c++17 -c -I./lib \
 	-DEIGEN_USE_MKL_ALL -DEIGEN_FAST_MATH -DNDEBUG 
 
 LD  = g++-6
-LDFLAGS	= -llapack -lblas -fopenmp -mfma -framework Accelerate -Wa,-q \
+LDFLAGS	= -g -llapack -lblas -fopenmp -mfma -framework Accelerate -Wa,-q \
 	-Wl,-rpath,/opt/intel/mkl/lib \
 	-Wl,-rpath,/opt/intel/compilers_and_libraries_2017.2.163/mac/compiler/lib \
 	-L/opt/intel/mkl/lib \

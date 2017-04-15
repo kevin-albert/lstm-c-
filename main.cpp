@@ -10,7 +10,7 @@
 #include "rng.h"
 #include "optimize.h"
 
-void init(const int epochs,        // -e
+void init(const int epochs,        // -E
           const int seq_length,    // -s
           const double rate,       // -r
           const double momentum,   // -m
@@ -19,7 +19,15 @@ void init(const int epochs,        // -e
           const std::string &checkpoint_file,
           const std::string &data_file);
 
-void train(const std::string &checkpoint_file, const std::string &data_file);
+void train(const int from_epoch,             // -e
+           const int from_file,              // -f
+           const int epochs_override,        // -E
+           const int seq_length_override,    // -s
+           const double rate_override,       // -r
+           const double momentum_override,   // -m
+           const double rate_decay_override, // -d
+           const std::string &checkpoint_file,
+           const std::string &data_file);
 
 void sample(const int n,       // -n
             const double temp, // -t
@@ -58,11 +66,11 @@ int main(int argc, char **argv)
         double momentum = 0.9;
         double rate_decay = 0.975;
         int num_cells = 100;
-        while ((c = getopt(argc - 1, argv + 1, "e:s:r:m:d:n:")) != -1)
+        while ((c = getopt(argc - 1, argv + 1, "E:s:r:m:d:n:")) != -1)
         {
             switch (c)
             {
-            case 'e':
+            case 'E':
                 epochs = std::stoi(optarg);
                 if (epochs <= 0)
                 {
@@ -119,17 +127,76 @@ int main(int argc, char **argv)
     }
     else if (cmd == "train")
     {
-        if (argc != 4)
+        if (argc < 4)
             print_usage_init(argv[0]);
 
         std::string checkpoint_file = argv[argc - 2];
         std::string data_file = argv[argc - 1];
 
-        train(checkpoint_file, data_file);
+        int c;
+        int from_epoch = -1;
+        int from_file = -1;
+        int epochs_override = -1;
+        int seq_length_override = -1;
+        double rate_override = -1;
+        double momentum_override = -1;
+        double rate_decay_override = -1;
+        while ((c = getopt(argc - 1, argv + 1, "e:f:E:s:r:m:d:n:")) != -1)
+        {
+            switch (c)
+            {
+            case 'e':
+                from_epoch = std::stoi(optarg);
+                if (from_epoch < 0)
+                {
+                    std::cerr << "starting epoch must be >= 0\n";
+                    exit(1);
+                }
+                break;
+            case 'f':
+                from_file = std::stoi(optarg);
+                if (from_file < 0)
+                {
+                    std::cerr << "starting file must be >= 0\n";
+                    exit(1);
+                }
+                break;
+            case 's':
+                seq_length_override = std::stoi(optarg);
+                if (seq_length_override <= 0)
+                {
+                    std::cerr << "sequence length must be > 0\n";
+                    exit(1);
+                }
+                break;
+            case 'r':
+                rate_override = std::stod(optarg);
+                break;
+            case 'm':
+                momentum_override = std::stod(optarg);
+                break;
+            case 'd':
+                rate_decay_override = std::stod(optarg);
+                break;
+            case '?':
+                print_usage_init(argv[0]);
+            default:
+                abort();
+            }
+        }
+
+        train(from_epoch,
+              from_file,
+              epochs_override,
+              seq_length_override,
+              rate_override,
+              momentum_override,
+              rate_decay_override,
+              checkpoint_file, data_file);
     }
     else if (cmd == "sample")
     {
-        if (argc != 4 && argc != 6)
+        if (argc < 4)
             print_usage_sample(argv[0]);
 
         int n = 1024;
@@ -187,7 +254,7 @@ void init(const int epochs,        // -e
     if (input_data.empty())
     {
         std::cerr << "no input\n";
-        exit(EXIT_FAILURE);
+        exit(1);
     }
 
     uint32_t epoch = 0;
@@ -255,14 +322,22 @@ void init(const int epochs,        // -e
 //
 //
 
-void train(const std::string &checkpoint_file, const std::string &data_file)
+void train(const int from_epoch,             // -e
+           const int from_file,              // -f
+           const int epochs_override,        // -E
+           const int seq_length_override,    // -s
+           const double rate_override,       // -r
+           const double momentum_override,   // -m
+           const double rate_decay_override, // -d
+           const std::string &checkpoint_file,
+           const std::string &data_file)
 {
     std::cout << "Reading input from " << data_file << "\n";
     std::vector<std::string *> input_data = read_data(data_file);
     if (input_data.empty())
     {
         std::cerr << "no input\n";
-        exit(EXIT_FAILURE);
+        exit(1);
     }
     TextMapper mapper(input_data);
     uint32_t num_input = mapper.num_classes();
@@ -351,6 +426,20 @@ void train(const std::string &checkpoint_file, const std::string &data_file)
 
     Vector dh(num_cells);
 
+    // apply command line overrides
+    if (from_epoch >= 0)
+        epoch = from_epoch;
+    if (from_file >= 0)
+        file = from_file;
+    if (seq_length_override >= 0)
+        seq_length = seq_length_override;
+    if (rate_override >= 0)
+        rate = rate_override;
+    if (momentum_override >= 0)
+        momentum = momentum_override;
+    if (rate_decay_override >= 0)
+        rate_decay = rate_decay_override;
+
     std::cout << "Training with settings:\n"
               << "epochs                " << epochs << "\n"
               << "sequence length       " << seq_length << "\n"
@@ -366,10 +455,12 @@ void train(const std::string &checkpoint_file, const std::string &data_file)
         std::cout << "Epoch " << epoch << "\n";
 
         double decayed_rate = rate * std::pow(rate_decay, epoch);
+        std::cout << "Learning rate: " << decayed_rate << "\n";
 
         // epoch - loop through files
         while (file < order.size())
         {
+            std::cout << "File " << file << " (" << order[file] << ")\n";
             double error = 0;
             int idx = 0;
             int seq_offset = 0;
@@ -472,7 +563,7 @@ void train(const std::string &checkpoint_file, const std::string &data_file)
 
                 seq_offset += seq_length;
 
-                optimize::nesterov(rate, momentum,
+                optimize::nesterov(decayed_rate, momentum,
                                    // layer 1
                                    L1.W, G1.W, M1.W,
                                    L1.b, G1.b, M1.b,
@@ -570,7 +661,7 @@ void sample(const int n, const double temp, const std::string &checkpoint_file, 
     if (input_data.empty())
     {
         std::cerr << "no input\n";
-        exit(EXIT_FAILURE);
+        exit(1);
     }
     TextMapper mapper(input_data);
     uint32_t num_input = mapper.num_classes();
@@ -619,12 +710,25 @@ void sample(const int n, const double temp, const std::string &checkpoint_file, 
     L2.num_input = L2.num_cells = num_cells;
     L3.num_input = L3.num_cells = num_cells;
 
+    Vector state1 = lstm_state(num_cells);
+    Vector state2 = lstm_state(num_cells);
+    Vector state3 = lstm_state(num_cells);
+
     Vector x(num_input);
+    Vector y(num_output);
     Vector p(num_output);
 
+    char c = '^';
     for (int i = 0; i < n; ++i)
     {
-        std::cout << ".";
+        mapper.to_onehot(c, x);
+        lstm_forwardpass(L1, state1, x, state1);
+        lstm_forwardpass(L2, state2, lstm_output(state1), state2);
+        lstm_forwardpass(L3, state3, lstm_output(state2), state3);
+        y = (Wyh * lstm_output(state3) + by) * temp;
+        softmax_activation(y, p);
+        c = mapper.from_dist(p);
+        std::cout << c;
     }
 }
 
@@ -643,9 +747,9 @@ void print_usage(const char *execname)
 
 void print_usage_init(const char *execname)
 {
-    std::cerr << "usage: " << execname << " init [-esrmdn] checkpoint_file data_file\n"
+    std::cerr << "usage: " << execname << " init [-Esrmdn] checkpoint_file data_file\n"
               << "flag  option              default\n"
-              << "-e:   epochs              50\n"
+              << "-E:   epochs              50\n"
               << "-s:   sequence length     100\n"
               << "-r:   learning rate       0.0005\n"
               << "-m:   momentum            0.9\n"
@@ -656,12 +760,23 @@ void print_usage_init(const char *execname)
 
 void print_usage_train(const char *execname)
 {
-    std::cerr << "usage: " << execname << " train checkpoint_file data_file\n";
+    std::cerr << "usage: " << execname << " train [-efEsrmd] checkpoint_file data_file\n"
+              << "flag  option              default\n"
+              << "-e:   starting epoch      [current epoch]\n"
+              << "-f:   starting file index [current file index]\n"
+              << "-E:   epochs              [saved value]\n"
+              << "-s:   sequence length     [saved value]\n"
+              << "-r:   learning rate       [saved value]\n"
+              << "-m:   momentum            [saved value]\n"
+              << "-d:   learning rate decay [saved value]\n";
     exit(1);
 }
 
 void print_usage_sample(const char *execname)
 {
-    std::cerr << "usage: " << execname << " sample [-n] checkpoint_file data_file\n";
+    std::cerr << "usage: " << execname << " sample [-nt] checkpoint_file data_file\n"
+              << "flag  option              default\n"
+              << "-n:   number of bytes     1024\n"
+              << "-t:   softmax temperature 1.0\n";
     exit(1);
 }
