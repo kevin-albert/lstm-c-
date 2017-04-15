@@ -292,7 +292,7 @@ void train(const std::string &checkpoint_file, const std::string &data_file)
     Matrix mWyh;
     Vector my;
 
-    std::cout << "Loading from " << data_file << "\n";
+    std::cout << "Loading from " << checkpoint_file << "\n";
     checkpoint::load(checkpoint_file,
                      // static data
                      epochs,
