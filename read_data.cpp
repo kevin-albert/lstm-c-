@@ -13,17 +13,17 @@ struct pipe_delimiter : std::ctype<char>
     }
 };
 
-std::vector<std::string> read_data(const std::string &filename)
+std::vector<std::string *> read_data(const std::string &filename)
 {
-    std::vector<std::string> v;
+    std::vector<std::string *> v;
     std::ifstream fin(filename);
     fin.imbue(std::locale(fin.getloc(), new pipe_delimiter()));
     int n = 0;
     while (fin)
     {
-        std::string chunk;
-        fin >> chunk;
-        if (chunk.size())
+        std::string *chunk = new std::string();
+        fin >> *chunk;
+        if (chunk->size())
             v.push_back(chunk);
     }
     return v;

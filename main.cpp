@@ -8,67 +8,182 @@
 #include "read_data.h"
 #include "text_mapper.h"
 #include "rng.h"
+#include "optimize.h"
 
-template <class T>
-void debug(const std::string &name, const std::vector<T> &v)
-{
-    std::cout << name << ": ";
-    for (int i = 0; i < v.size(); ++i)
-        std::cout << v[i] << " ";
-    std::cout << "\n";
-}
+void init(const int epochs,        // -e
+          const int seq_length,    // -s
+          const double rate,       // -r
+          const double momentum,   // -m
+          const double rate_decay, // -d
+          const int num_cells,     // -n
+          const std::string &checkpoint_file,
+          const std::string &data_file);
 
-template <class V>
-void debug(const std::string &name, const V &v)
-{
-    std::cout << name << ": " << v << "\n";
-}
+void train(const std::string &checkpoint_file, const std::string &data_file);
 
-#define dbg(var) debug(#var, var);
+void sample(const int n,       // -n
+            const double temp, // -t
+            const std::string &checkpoint_file, const std::string &data_file);
 
-void init(int epochs,                      // -e
-          int seq_length,                  // -s
-          double rate,                     // -r
-          double momentum,                 // -m
-          double rate_decay,               // -d
-          int num_cells,                   // -c
-          const std::string &data_file,    // -i
-          const std::string &output_file); // -o
+void print_usage(const char *execname);
+void print_usage_init(const char *execname);
+void print_usage_train(const char *execname);
+void print_usage_sample(const char *execname);
 
-void train(const std::string &data_file, const std::string &checkpoint_file);
-
-void sample(const std::string &data_file, const std::string &checkpoint_file);
-
+//
+// MAIN
+// parse argv
+// dispatch command function - init(), train(), sample()
+//
 int main(int argc, char **argv)
 {
-    if (argc > 1)
+
+    if (argc < 2)
+        print_usage(argv[0]);
+
+    std::string cmd = argv[1];
+
+    if (cmd == "init")
     {
-        std::cout << "init\n";
-        init(50,
-             100,
-             0.001,
-             0.9,
-             0.97,
-             100,
-             "startrek_data.txt",
-             "lstm.dat");
+        if (argc < 4)
+            print_usage_init(argv[0]);
+
+        std::string checkpoint_file = argv[argc - 2];
+        std::string data_file = argv[argc - 1];
+
+        int c;
+        int epochs = 50;
+        int seq_length = 100;
+        double rate = 0.0005;
+        double momentum = 0.9;
+        double rate_decay = 0.975;
+        int num_cells = 100;
+        while ((c = getopt(argc - 1, argv + 1, "e:s:r:m:d:n:")) != -1)
+        {
+            switch (c)
+            {
+            case 'e':
+                epochs = std::stoi(optarg);
+                if (epochs <= 0)
+                {
+                    std::cerr << "epochs must be > 0\n";
+                    exit(1);
+                }
+                break;
+            case 's':
+                seq_length = std::stoi(optarg);
+                if (seq_length <= 0)
+                {
+                    std::cerr << "sequence length must be > 0\n";
+                    exit(1);
+                }
+                break;
+            case 'r':
+                rate = std::stod(optarg);
+                break;
+            case 'm':
+                momentum = std::stod(optarg);
+                break;
+            case 'd':
+                rate_decay = std::stod(optarg);
+                break;
+            case 'n':
+                num_cells = std::stoi(optarg);
+                if (num_cells <= 0)
+                {
+                    std::cerr << "number of cells must be > 0\n";
+                    exit(1);
+                }
+                break;
+            case '?':
+                print_usage_init(argv[0]);
+            default:
+                abort();
+            }
+        }
+        std::cout << "Initializing with settings:\n"
+                  << "epochs                " << epochs << "\n"
+                  << "sequence length       " << seq_length << "\n"
+                  << "learning rate         " << rate << "\n"
+                  << "momentum              " << momentum << "\n"
+                  << "learning rate decay   " << rate_decay << "\n"
+                  << "hidden layer size     " << num_cells << "\n";
+        init(epochs,
+             seq_length,
+             rate,
+             momentum,
+             rate_decay,
+             num_cells,
+             checkpoint_file,
+             data_file);
+    }
+    else if (cmd == "train")
+    {
+        if (argc != 4)
+            print_usage_init(argv[0]);
+
+        std::string checkpoint_file = argv[argc - 2];
+        std::string data_file = argv[argc - 1];
+
+        train(checkpoint_file, data_file);
+    }
+    else if (cmd == "sample")
+    {
+        if (argc != 4 && argc != 6)
+            print_usage_sample(argv[0]);
+
+        int n = 1024;
+        double temp = 1;
+        int c;
+        while ((c = getopt(argc - 1, argv + 1, "t:n:")) != -1)
+        {
+            switch (c)
+            {
+            case 't':
+                temp = std::stod(optarg);
+                break;
+            case 'n':
+                n = std::stoi(optarg);
+                if (n <= 0)
+                {
+                    std::cerr << "sample size must be > 0\n";
+                    exit(1);
+                }
+                break;
+            case '?':
+                print_usage_sample(argv[0]);
+            default:
+                abort();
+            }
+        }
+        std::string checkpoint_file = argv[argc - 2];
+        std::string data_file = argv[argc - 1];
+        sample(n, temp, checkpoint_file, data_file);
     }
     else
     {
-        train("startrek_data.txt", "lstm.dat");
+        print_usage(argv[0]);
     }
 }
 
-void init(int epochs,                         // -e
-          int seq_length,                     // -s
-          double rate,                        // -r
-          double momentum,                    // -m
-          double rate_decay,                  // -d
-          int num_cells,                      // -c
-          const std::string &data_file,       // -i
-          const std::string &checkpoint_file) // -o
+//
+//
+// INIT
+//
+//
+
+void init(const int epochs,        // -e
+          const int seq_length,    // -s
+          const double rate,       // -r
+          const double momentum,   // -m
+          const double rate_decay, // -d
+          const int num_cells,     // -n
+          const std::string &checkpoint_file,
+          const std::string &data_file)
 {
-    std::vector<std::string> input_data = read_data(data_file);
+    std::cout << "Reading input from " << data_file << "\n";
+    std::vector<std::string *> input_data = read_data(data_file);
+
     if (input_data.empty())
     {
         std::cerr << "no input\n";
@@ -87,28 +202,23 @@ void init(int epochs,                         // -e
     uint32_t num_output = mapper.num_classes();
 
     Layer L1 = lstm_layer(num_input, num_cells);
-    Layer L2 = lstm_layer(num_input, num_cells);
-    Layer L3 = lstm_layer(num_input, num_cells);
+    Layer L2 = lstm_layer(num_cells, num_cells);
+    Layer L3 = lstm_layer(num_cells, num_cells);
     lstm_init_layer(L1);
     lstm_init_layer(L2);
     lstm_init_layer(L3);
 
     Matrix Wyh(num_output, num_cells);
-    rng::setnormal(Wyh, 0, std::sqrt(num_cells));
-    Vector by(num_output);
-
-    Layer D1 = lstm_layer(num_input, num_cells);
-    Layer D2 = lstm_layer(num_input, num_cells);
-    Layer D3 = lstm_layer(num_input, num_cells);
-    Matrix dWyh = Matrix::Zero(num_output, num_cells);
-    Vector dy = Vector::Zero(num_output);
+    rng::setnormal(Wyh, 0, 1.0 / std::sqrt(num_cells));
+    Vector by = Vector::Random(num_output) * 0.1;
 
     Layer M1 = lstm_layer(num_input, num_cells);
-    Layer M2 = lstm_layer(num_input, num_cells);
-    Layer M3 = lstm_layer(num_input, num_cells);
+    Layer M2 = lstm_layer(num_cells, num_cells);
+    Layer M3 = lstm_layer(num_cells, num_cells);
     Matrix mWyh = Matrix::Zero(num_output, num_cells);
     Vector my = Vector::Zero(num_output);
 
+    std::cout << "Saving to " << checkpoint_file << "\n";
     checkpoint::save(checkpoint_file,
                      // static data
                      epochs,
@@ -130,19 +240,25 @@ void init(int epochs,                         // -e
                      Wyh, by,
 
                      // gradients, momentum
-                     D1.W, D1.b,
-                     D2.W, D2.b,
-                     D3.W, D3.b,
-                     dWyh, dy,
                      M1.W, M1.b,
                      M2.W, M2.b,
                      M3.W, M3.b,
                      mWyh, my);
+
+    std::for_each(input_data.begin(), input_data.end(), [](std::string *chunk) { delete chunk; });
+    std::cout << "Done\n";
 }
 
-void train(const std::string &data_file, const std::string &checkpoint_file)
+//
+//
+// TRAIN
+//
+//
+
+void train(const std::string &checkpoint_file, const std::string &data_file)
 {
-    std::vector<std::string> input_data = read_data(data_file);
+    std::cout << "Reading input from " << data_file << "\n";
+    std::vector<std::string *> input_data = read_data(data_file);
     if (input_data.empty())
     {
         std::cerr << "no input\n";
@@ -170,18 +286,13 @@ void train(const std::string &data_file, const std::string &checkpoint_file)
     Matrix Wyh;
     Vector by;
 
-    Layer D1;
-    Layer D2;
-    Layer D3;
-    Matrix dWyh;
-    Vector dy;
-
     Layer M1;
     Layer M2;
     Layer M3;
     Matrix mWyh;
     Vector my;
 
+    std::cout << "Loading from " << data_file << "\n";
     checkpoint::load(checkpoint_file,
                      // static data
                      epochs,
@@ -202,63 +313,180 @@ void train(const std::string &data_file, const std::string &checkpoint_file)
                      L3.W, L3.b,
                      Wyh, by,
 
-                     // gradients, momentum
-                     D1.W, D1.b,
-                     D2.W, D2.b,
-                     D3.W, D3.b,
-                     dWyh, dy,
+                     // momentum
                      M1.W, M1.b,
                      M2.W, M2.b,
                      M3.W, M3.b,
                      mWyh, my);
+
+    L1.num_input = num_input;
+    L1.num_cells = num_cells;
+    L2.num_input = L2.num_cells = num_cells;
+    L3.num_input = L3.num_cells = num_cells;
+
+    // Track accumulated gradients
+    Layer G1 = lstm_layer(num_input, num_cells);
+    Layer G2 = lstm_layer(num_cells, num_cells);
+    Layer G3 = lstm_layer(num_cells, num_cells);
+    Matrix gWyh = Matrix::Zero(num_output, num_cells);
+    Vector gy = Vector::Zero(num_output);
 
     // BPTT - track each state / output
     std::vector<Vector> states1(seq_length + 1);
     std::vector<Vector> states2(seq_length + 1);
     std::vector<Vector> states3(seq_length + 1);
 
-    std::vector<Vector> outputs1(seq_length + 1);
-    std::vector<Vector> outputs2(seq_length + 1);
-    std::vector<Vector> outputs3(seq_length + 1);
+    std::vector<Vector> outputs(seq_length + 1);
 
-    for (size_t i = 0; i < seq_length; ++i)
-    {
-        states1[i] = lstm_state(num_cells);
-        states1[i] = lstm_state(num_cells);
-        states1[i] = lstm_state(num_cells);
-    }
+    Vector x(num_input);
+    Vector y_(num_output);
+    Vector p(num_output);
 
+    // Track intermediate gradients
+    Gradients D1 = lstm_gradients(num_input, num_cells);
+    Gradients D2 = lstm_gradients(num_cells, num_cells);
+    Gradients D3 = lstm_gradients(num_cells, num_cells);
+    // dWyh not needed
+    Vector dy(num_output);
+
+    Vector dh(num_cells);
+
+    std::cout << "Training with settings:\n"
+              << "epochs                " << epochs << "\n"
+              << "sequence length       " << seq_length << "\n"
+              << "learning rate         " << rate << "\n"
+              << "momentum              " << momentum << "\n"
+              << "learning rate decay   " << rate_decay << "\n"
+              << "hidden layer size     " << num_cells << "\n";
+
+    // loop through epochs
     while (epoch < epochs)
     {
+        if (file == 0)
+            std::cout << "Epoch " << epoch << "\n";
+
+        double decayed_rate = rate * std::pow(rate_decay, epoch);
+
+        // epoch - loop through files
         while (file < order.size())
         {
-            std::cout << epoch << " - " << file << "\n";
-            size_t seq_idx = 0;
-            /*
-            Layer L = lstm_layer(2, 1);
-            Vector state1 = lstm_state(1);
-            Vector o = lstm_output(state1);
-            return o[0];
+            double error = 0;
+            int idx = 0;
+            int seq_offset = 0;
+            std::string *chunk = input_data[order[file]];
 
-            Vector x(2);
-            x << 1, 0.5;
-            Vector state2 = lstm_state(1);
+            // sample text during training
+            int sample = chunk->size() > seq_length ? rng::randint(chunk->size() / seq_length) * seq_length : 0;
 
-            state1 << 0, 0, 0, 0, 0.5, 0.75;
-            lstm_forwardpass(L, state1, x, state2);
+            // beginning of file - reset state
+            for (int i = 0; i < seq_length + 1; ++i)
+            {
+                states1[i] = lstm_state(num_cells);
+                states2[i] = lstm_state(num_cells);
+                states3[i] = lstm_state(num_cells);
+            }
 
-            Vector h = lstm_output(state2);
-            Vector dh(1);
-            dh << 0.67;
+            // file - BPTT over each subsequence
+            while (seq_offset < chunk->size())
+            {
+                // Reset accumulated gradients
+                G1.W.setZero();
+                G1.b.setZero();
+                G2.W.setZero();
+                G2.b.setZero();
+                G3.W.setZero();
+                G3.b.setZero();
+                gWyh.setZero();
+                gy.setZero();
 
-            Vector d = lstm_state(1);
-            d << 0.1, 0.2, 0.3, 0.4, -0.1, -0.2;
+                int seq_end = seq_offset + seq_length;
+                if (seq_end >= chunk->size())
+                    seq_end = chunk->size() - 1;
 
-            Matrix dW = Matrix::Zero(4 * 1, 2 + 1);
-            Vector dx = Vector::Zero(2);
+                // BPTT - loop through sequence
+                for (int i = seq_offset; i < seq_end; ++i)
+                {
+                    mapper.to_onehot((*chunk)[i], x);
 
-            lstm_backwardpass(L, state2, x, state1, dh, dW, d, dx);
-            */
+                    int idx_next = (idx + 1) % (seq_length + 1);
+                    lstm_forwardpass(L1, states1[idx], x, states1[idx_next]);
+                    lstm_forwardpass(L2, states2[idx], lstm_output(states1[idx_next]), states2[idx_next]);
+                    lstm_forwardpass(L3, states3[idx], lstm_output(states2[idx_next]), states3[idx_next]);
+                    outputs[idx] = Wyh * lstm_output(states3[idx_next]) + by;
+                    idx = idx_next;
+                }
+
+                // Reset intermediate gradients
+                D1.W.setZero();
+                D1.S.setZero();
+                D2.W.setZero();
+                D2.S.setZero();
+                D3.W.setZero();
+                D3.S.setZero();
+                dy.setZero();
+
+                for (int i = seq_end - 1; i >= seq_offset; --i)
+                {
+                    size_t idx_next = idx;
+                    idx = (idx_next - 1) % (seq_length + 1);
+                    bool has_next = i < seq_end - 1;
+
+                    mapper.to_onehot((*chunk)[i], x);
+                    mapper.to_onehot((*chunk)[i + 1], y_);
+                    error += softmax_cross_entropy_onehot(y_, outputs[idx], p, dy);
+                    dh = Wyh.transpose() * dy;
+
+                    lstm_backwardpass(has_next, L3, states3[idx_next], lstm_output(states2[idx_next]), states3[idx], dh, D3, dh);
+                    lstm_backwardpass(has_next, L2, states2[idx_next], lstm_output(states1[idx_next]), states2[idx], dh, D2, dh);
+                    lstm_backwardpass(has_next, L1, states1[idx_next], x, states1[idx], dh, D1);
+
+                    // Accumulate gradients
+                    G1.W += D1.W;
+                    G1.b += D1.S.segment(0, 4 * num_cells);
+                    G2.W += D2.W;
+                    G2.b += D2.S.segment(0, 4 * num_cells);
+                    G3.W += D3.W;
+                    G3.b += D3.S.segment(0, 4 * num_cells);
+                    gWyh += dy * lstm_output(states3[idx_next]).transpose();
+                    gy += dy;
+                }
+
+                if (seq_offset == sample)
+                {
+                    std::cout << "y: ";
+                    int j = idx;
+                    for (int i = seq_offset + 1; i < seq_end; ++i)
+                    {
+                        char c = mapper.from_onehot(outputs[j]);
+                        std::cout << c;
+                        j = (j + 1) % (seq_length);
+                    }
+                    std::cout << "\n";
+                }
+
+                seq_offset += seq_length;
+
+                optimize::nesterov(decayed_rate, momentum,
+                                   // layer 1
+                                   L1.W, G1.W, M1.W,
+                                   L1.b, G1.b, M1.b,
+
+                                   // layer 2
+                                   L2.W, G2.W, M2.W,
+                                   L2.b, G2.b, M2.b,
+
+                                   // layer 3
+                                   L3.W, G3.W, M3.W,
+                                   L3.b, G3.b, M3.b,
+
+                                   // output
+                                   Wyh, gWyh, mWyh,
+                                   by, gy, my);
+            }
+
+            error /= chunk->size();
+            if (file == 0)
+                std::cout << "[" << file << "] error: " << error << "\n";
 
             ++file;
             if (file < order.size())
@@ -283,11 +511,7 @@ void train(const std::string &data_file, const std::string &checkpoint_file)
                                  L3.W, L3.b,
                                  Wyh, by,
 
-                                 // gradients, momentum
-                                 D1.W, D1.b,
-                                 D2.W, D2.b,
-                                 D3.W, D3.b,
-                                 dWyh, dy,
+                                 // momentum
                                  M1.W, M1.b,
                                  M2.W, M2.b,
                                  M3.W, M3.b,
@@ -320,14 +544,120 @@ void train(const std::string &data_file, const std::string &checkpoint_file)
                          L3.W, L3.b,
                          Wyh, by,
 
-                         // gradients, momentum
-                         D1.W, D1.b,
-                         D2.W, D2.b,
-                         D3.W, D3.b,
-                         dWyh, dy,
+                         // momentum
                          M1.W, M1.b,
                          M2.W, M2.b,
                          M3.W, M3.b,
                          mWyh, my);
     }
+
+    std::cout << "Finished\n";
+    std::for_each(input_data.begin(), input_data.end(), [](std::string *chunk) { delete chunk; });
+}
+
+//
+//
+// SAMPLE
+//
+//
+void sample(const int n, const double temp, const std::string &checkpoint_file, const std::string &data_file)
+{
+    std::vector<std::string *> input_data = read_data(data_file);
+    if (input_data.empty())
+    {
+        std::cerr << "no input\n";
+        exit(EXIT_FAILURE);
+    }
+    TextMapper mapper(input_data);
+    uint32_t num_input = mapper.num_classes();
+    uint32_t num_output = mapper.num_classes();
+
+    int epochs;
+    int seq_length;
+    int num_cells;
+
+    double rate;
+    double momentum;
+    double rate_decay;
+
+    int epoch;
+    int file;
+    std::vector<int> order;
+
+    Layer L1;
+    Layer L2;
+    Layer L3;
+    Matrix Wyh;
+    Vector by;
+
+    checkpoint::load(checkpoint_file,
+                     // static data
+                     epochs,
+                     seq_length,
+                     rate,
+                     momentum,
+                     rate_decay,
+                     num_cells,
+
+                     // current iteration
+                     epoch,
+                     file,
+                     order,
+
+                     // params
+                     L1.W, L1.b,
+                     L2.W, L2.b,
+                     L3.W, L3.b,
+                     Wyh, by);
+
+    L1.num_input = num_input;
+    L1.num_cells = num_cells;
+    L2.num_input = L2.num_cells = num_cells;
+    L3.num_input = L3.num_cells = num_cells;
+
+    Vector x(num_input);
+    Vector p(num_output);
+
+    for (int i = 0; i < n; ++i)
+    {
+        std::cout << ".";
+    }
+}
+
+//
+//
+// PRINT USAGE
+//
+void print_usage(const char *execname)
+{
+    std::cerr << "usage:\n"
+              << execname << " init -esrmdn checkpoint_file data_file\n"
+              << execname << " train checkpoint_file data_file\n"
+              << execname << " sample checkpoint_file data_file\n";
+    exit(1);
+}
+
+void print_usage_init(const char *execname)
+{
+    std::cerr << "usage: " << execname << " init [-esrmdn] checkpoint_file data_file\n"
+              << "flag  option              default\n"
+              << "-e:   epochs              50\n"
+              << "-s:   sequence length     100\n"
+              << "-r:   learning rate       0.0005\n"
+              << "-m:   momentum            0.9\n"
+              << "-d:   learning rate decay 0.975\n"
+              << "-n:   cells per layer     100\n";
+    exit(1);
+}
+
+void print_usage_train(const char *execname)
+{
+    std::cerr << "usage: " << execname << " train checkpoint_file data_file\n";
+    exit(1);
+}
+
+void print_usage_sample(const char *execname)
+{
+    std::cerr << "usage: " << execname << " sample [-n] checkpoint_file data_file\n";
+    exit(1);
 }

@@ -8,10 +8,10 @@
 class TextMapper
 {
 public:
-  TextMapper(std::vector<std::string> &data);
-  void to_onehot(const char, Vector &) const;
-  char from_onehot(Vector &) const;
-  char from_dist(Vector &) const;
+  TextMapper(std::vector<std::string *> &data);
+  void to_onehot(const unsigned char, Vector &) const;
+  unsigned char from_onehot(Vector &) const;
+  unsigned char from_dist(Vector &) const;
   uint32_t num_classes() const { return decoder.size(); }
 
 private:

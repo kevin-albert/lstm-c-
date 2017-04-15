@@ -7,6 +7,7 @@ namespace rng
 {
 float uniform(float min, float max);
 float normal(float mean, float stddev);
+int randint(int max);
 void setnormal(Matrix &m, float mean, float stddev);
 }
 

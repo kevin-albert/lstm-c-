@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 
-std::vector<std::string> read_data(const std::string &filename);
+std::vector<std::string *> read_data(const std::string &filename);
 bool file_exists(const std::string &filename);
 
 #endif
