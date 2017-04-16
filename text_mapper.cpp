@@ -52,7 +52,7 @@ unsigned char TextMapper::from_onehot(Vector &A) const
 unsigned char TextMapper::from_dist(Vector &p) const
 {
     float sum = 0;
-    float r = rng::normal(0, 1);
+    float r = rng::uniform(0, 1);
     for (int i = 0; i < p.size(); ++i)
     {
         sum += p[i];
