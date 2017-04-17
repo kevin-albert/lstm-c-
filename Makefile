@@ -1,5 +1,5 @@
 CXX = g++-6
-CXXFLAGS= -Ofast --std=c++17 -c -I./lib -g \
+CXXFLAGS= -Ofast --std=c++17 -c -I./lib \
     -msse2 -march=native \
     -mfma -fopenmp \
     -DMKL_LP64 -I/opt/intel/mkl/include \
@@ -19,6 +19,7 @@ LDFLAGS	= -g -llapack -lblas -fopenmp -mfma -framework Accelerate -Wa,-q \
 	-lm -ldl 
 
 
+# XXX for dev, compiles faster
 #CXX = g++-6
 #CXXFLAGS= -O2 --std=c++17 -c -I./lib
 #LD  = g++-6
