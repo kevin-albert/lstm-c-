@@ -7,7 +7,7 @@ CXXFLAGS= -Ofast --std=c++17 -c -I./lib \
 	-DEIGEN_USE_MKL_ALL -DEIGEN_FAST_MATH -DNDEBUG 
 
 LD  = g++-6
-LDFLAGS	= -g -llapack -lblas -fopenmp -mfma -framework Accelerate -Wa,-q \
+LDFLAGS	= -llapack -lblas -fopenmp -mfma -framework Accelerate -Wa,-q \
 	-Wl,-rpath,/opt/intel/mkl/lib \
 	-Wl,-rpath,/opt/intel/compilers_and_libraries_2017.2.163/mac/compiler/lib \
 	-L/opt/intel/mkl/lib \
