@@ -449,33 +449,21 @@ void train(const int from_epoch,             // -e
               << "hidden layer size     " << num_cells << "\n"
               << "input/output size     " << mapper.num_classes() << "\n";
 
+    int total_bytes = 10000;
+
     // loop through epochs
     while (epoch < epochs)
     {
-        std::cout << "Epoch " << epoch << "\n";
-
         double decayed_rate = rate * std::pow(rate_decay, epoch);
-        std::cout << "Learning rate: " << decayed_rate << "\n";
 
         // epoch - loop through files
         while (file < order.size())
         {
-            std::cout << "File " << file << " (" << order[file] << ")\n";
+            std::cout << epoch << " - " << file << "\n";
             double error = 0;
             int idx = 0;
             int seq_offset = 0;
             std::string *chunk = input_data[order[file]];
-
-            // sample text during training
-            int sample = chunk->size() > seq_length ? rng::randint(chunk->size() / seq_length) * seq_length : 0;
-
-            // beginning of file - reset state
-            for (int i = 0; i < seq_length + 1; ++i)
-            {
-                states1[i] = lstm_state(num_cells);
-                states2[i] = lstm_state(num_cells);
-                states3[i] = lstm_state(num_cells);
-            }
 
             // file - BPTT over each subsequence
             while (seq_offset < chunk->size())
@@ -490,9 +478,23 @@ void train(const int from_epoch,             // -e
                 gWyh.setZero();
                 gy.setZero();
 
+                // Occasionally reset state
+                if (total_bytes >= 10000) {
+                    std::cout << (100 * seq_offset / chunk->size()) << "%\n";
+                    for (int i = 0; i < seq_length + 1; ++i)
+                    {
+                        states1[i] = lstm_state(num_cells);
+                        states2[i] = lstm_state(num_cells);
+                        states3[i] = lstm_state(num_cells);
+                    }
+                    total_bytes = 0;
+                }
+
                 int seq_end = seq_offset + seq_length;
                 if (seq_end >= chunk->size())
                     seq_end = chunk->size() - 1;
+
+                total_bytes += seq_end - seq_offset;
 
                 // BPTT - loop through sequence
                 for (int i = seq_offset; i < seq_end; ++i)
@@ -550,17 +552,6 @@ void train(const int from_epoch,             // -e
                     gWyh += dy * lstm_output(states3[idx_next]).transpose();
                     gy += dy;
                 }
-                if (seq_offset == sample)
-                {
-                    std::cout << "sample:   \"";
-                    for (int i = seq_offset + 1; i < seq_end; ++i)
-                    {
-                        std::cout << mapper.from_onehot(outputs[idx]);
-                        idx = (idx + 1) % (seq_length);
-                    }
-                    std::cout << "\"\n";
-                }
-
                 seq_offset += seq_length;
 
                 optimize::nesterov(decayed_rate, momentum,
@@ -685,6 +676,7 @@ void sample(const int n, const double temp, const std::string &checkpoint_file, 
     Matrix Wyh;
     Vector by;
 
+    std::cout << "load\n";
     checkpoint::load(checkpoint_file,
                      // static data
                      epochs,
