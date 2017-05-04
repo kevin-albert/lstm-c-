@@ -10,22 +10,24 @@
 #include "rng.h"
 #include "optimize.h"
 
-void init(const int epochs,        // -E
-          const int seq_length,    // -s
-          const double rate,       // -r
-          const double momentum,   // -m
-          const double rate_decay, // -d
-          const int num_cells,     // -n
+void init(const int epochs,          // -E
+          const int seq_length,      // -s
+          const double rate,         // -r
+          const double momentum,     // -m
+          const double rate_decay,   // -d
+          const double output_noise, // -g
+          const int num_cells,       // -n
           const std::string &checkpoint_file,
           const std::string &data_file);
 
-void train(const int from_epoch,             // -e
-           const int from_file,              // -f
-           const int epochs_override,        // -E
-           const int seq_length_override,    // -s
-           const double rate_override,       // -r
-           const double momentum_override,   // -m
-           const double rate_decay_override, // -d
+void train(const int from_epoch,               // -e
+           const int from_file,                // -f
+           const int epochs_override,          // -E
+           const int seq_length_override,      // -s
+           const double rate_override,         // -r
+           const double momentum_override,     // -m
+           const double rate_decay_override,   // -d
+           const double output_noise_override, // -g
            const std::string &checkpoint_file,
            const std::string &data_file);
 
@@ -65,6 +67,7 @@ int main(int argc, char **argv)
         double rate = 0.0005;
         double momentum = 0.9;
         double rate_decay = 0.975;
+        double output_noise = 0.01;
         int num_cells = 100;
         while ((c = getopt(argc - 1, argv + 1, "E:s:r:m:d:n:")) != -1)
         {
@@ -115,12 +118,14 @@ int main(int argc, char **argv)
                   << "learning rate         " << rate << "\n"
                   << "momentum              " << momentum << "\n"
                   << "learning rate decay   " << rate_decay << "\n"
+                  << "output noise          " << output_noise << "\n"
                   << "hidden layer size     " << num_cells << "\n";
         init(epochs,
              seq_length,
              rate,
              momentum,
              rate_decay,
+             output_noise,
              num_cells,
              checkpoint_file,
              data_file);
@@ -141,6 +146,8 @@ int main(int argc, char **argv)
         double rate_override = -1;
         double momentum_override = -1;
         double rate_decay_override = -1;
+        double output_noise_override = -1;
+
         while ((c = getopt(argc - 1, argv + 1, "e:f:E:s:r:m:d:n:")) != -1)
         {
             switch (c)
@@ -178,6 +185,9 @@ int main(int argc, char **argv)
             case 'd':
                 rate_decay_override = std::stod(optarg);
                 break;
+            case 'g':
+                output_noise_override = std::stod(optarg);
+                break;
             case '?':
                 print_usage_init(argv[0]);
             default:
@@ -192,7 +202,9 @@ int main(int argc, char **argv)
               rate_override,
               momentum_override,
               rate_decay_override,
-              checkpoint_file, data_file);
+              output_noise_override,
+              checkpoint_file,
+              data_file);
     }
     else if (cmd == "sample")
     {
@@ -239,12 +251,13 @@ int main(int argc, char **argv)
 //
 //
 
-void init(const int epochs,        // -e
-          const int seq_length,    // -s
-          const double rate,       // -r
-          const double momentum,   // -m
-          const double rate_decay, // -d
-          const int num_cells,     // -n
+void init(const int epochs,          // -e
+          const int seq_length,      // -s
+          const double rate,         // -r
+          const double momentum,     // -m
+          const double rate_decay,   // -d
+          const double output_noise, // -g
+          const int num_cells,       // -n
           const std::string &checkpoint_file,
           const std::string &data_file)
 {
@@ -293,6 +306,7 @@ void init(const int epochs,        // -e
                      rate,
                      momentum,
                      rate_decay,
+                     output_noise,
                      num_cells,
 
                      // current iteration
@@ -322,13 +336,14 @@ void init(const int epochs,        // -e
 //
 //
 
-void train(const int from_epoch,             // -e
-           const int from_file,              // -f
-           const int epochs_override,        // -E
-           const int seq_length_override,    // -s
-           const double rate_override,       // -r
-           const double momentum_override,   // -m
-           const double rate_decay_override, // -d
+void train(const int from_epoch,               // -e
+           const int from_file,                // -f
+           const int epochs_override,          // -E
+           const int seq_length_override,      // -s
+           const double rate_override,         // -r
+           const double momentum_override,     // -m
+           const double rate_decay_override,   // -d
+           const double output_noise_override, // -g
            const std::string &checkpoint_file,
            const std::string &data_file)
 {
@@ -350,6 +365,7 @@ void train(const int from_epoch,             // -e
     double rate;
     double momentum;
     double rate_decay;
+    double output_noise;
 
     int epoch;
     int file;
@@ -369,12 +385,13 @@ void train(const int from_epoch,             // -e
 
     std::cout << "Loading from " << checkpoint_file << "\n";
     checkpoint::load(checkpoint_file,
-                     // static data
+                     // static data, hyperparams
                      epochs,
                      seq_length,
                      rate,
                      momentum,
                      rate_decay,
+                     output_noise,
                      num_cells,
 
                      // current iteration
@@ -439,6 +456,8 @@ void train(const int from_epoch,             // -e
         momentum = momentum_override;
     if (rate_decay_override >= 0)
         rate_decay = rate_decay_override;
+    if (output_noise_override >= 0)
+        output_noise = output_noise_override;
 
     std::cout << "Training with settings:\n"
               << "epochs                " << epochs << "\n"
@@ -446,6 +465,7 @@ void train(const int from_epoch,             // -e
               << "learning rate         " << rate << "\n"
               << "momentum              " << momentum << "\n"
               << "learning rate decay   " << rate_decay << "\n"
+              << "output noise          " << output_noise << "\n"
               << "hidden layer size     " << num_cells << "\n"
               << "input/output size     " << mapper.num_classes() << "\n";
 
@@ -479,7 +499,8 @@ void train(const int from_epoch,             // -e
                 gy.setZero();
 
                 // Occasionally reset state
-                if (total_bytes >= 10000) {
+                if (total_bytes >= 10000)
+                {
                     std::cout << (100 * seq_offset / chunk->size()) << "%\n";
                     for (int i = 0; i < seq_length + 1; ++i)
                     {
@@ -505,7 +526,12 @@ void train(const int from_epoch,             // -e
                     lstm_forwardpass(L1, states1[idx], x, states1[idx_next]);
                     lstm_forwardpass(L2, states2[idx], lstm_output(states1[idx_next]), states2[idx_next]);
                     lstm_forwardpass(L3, states3[idx], lstm_output(states2[idx_next]), states3[idx_next]);
+
                     outputs[idx] = Wyh * lstm_output(states3[idx_next]) + by;
+
+                    // regularization - apply gaussian noise to output
+                    for (uint32_t j = 0; j < num_output; ++j)
+                        outputs[idx][j] += rng::normal(0, output_noise);
 
                     idx = idx_next;
                 }
@@ -528,14 +554,7 @@ void train(const int from_epoch,             // -e
                     mapper.to_onehot((*chunk)[i], x);
                     mapper.to_onehot((*chunk)[i + 1], y_);
                     error += softmax_cross_entropy_onehot(y_, outputs[idx], p, dy);
-                    int k = 0;
-                    for (int j = 1; j < p.size(); ++j)
-                    {
-                        if (p[j] > p[k])
-                        {
-                            k = j;
-                        }
-                    }
+
                     dh = Wyh.transpose() * dy;
 
                     lstm_backwardpass(has_next, L3, states3[idx_next], lstm_output(states2[idx_next]), states3[idx], dh, D3, dh);
@@ -578,12 +597,13 @@ void train(const int from_epoch,             // -e
             if (file < order.size())
             {
                 checkpoint::save(checkpoint_file,
-                                 // static data
+                                 // static data, hyperparams
                                  epochs,
                                  seq_length,
                                  rate,
                                  momentum,
                                  rate_decay,
+                                 output_noise,
                                  num_cells,
 
                                  // current iteration
@@ -611,12 +631,13 @@ void train(const int from_epoch,             // -e
         file = 0;
         std::random_shuffle(order.begin(), order.end());
         checkpoint::save(checkpoint_file,
-                         // static data
+                         // static data, hyperparams
                          epochs,
                          seq_length,
                          rate,
                          momentum,
                          rate_decay,
+                         output_noise,
                          num_cells,
 
                          // current iteration
@@ -657,14 +678,9 @@ void sample(const int n, const double temp, const std::string &checkpoint_file, 
     TextMapper mapper(input_data);
     uint32_t num_input = mapper.num_classes();
     uint32_t num_output = mapper.num_classes();
-
-    int epochs;
-    int seq_length;
+    int _i;
+    double _f;
     int num_cells;
-
-    double rate;
-    double momentum;
-    double rate_decay;
 
     int epoch;
     int file;
@@ -678,20 +694,21 @@ void sample(const int n, const double temp, const std::string &checkpoint_file, 
 
     std::cout << "load\n";
     checkpoint::load(checkpoint_file,
-                     // static data
-                     epochs,
-                     seq_length,
-                     rate,
-                     momentum,
-                     rate_decay,
+                     // static data - we just need num_cells
+                     _i,
+                     _i,
+                     _f,
+                     _f,
+                     _f,
+                     _f,
                      num_cells,
 
-                     // current iteration
-                     epoch,
-                     file,
+                     // current iteration - don't need this
+                     _i,
+                     _i,
                      order,
 
-                     // params
+                     // params - still need these
                      L1.W, L1.b,
                      L2.W, L2.b,
                      L3.W, L3.b,
@@ -746,6 +763,7 @@ void print_usage_init(const char *execname)
               << "-r:   learning rate       0.0005\n"
               << "-m:   momentum            0.9\n"
               << "-d:   learning rate decay 0.975\n"
+              << "-g:   output noise        0.01\n"
               << "-n:   cells per layer     100\n";
     exit(1);
 }
@@ -760,7 +778,8 @@ void print_usage_train(const char *execname)
               << "-s:   sequence length     [saved value]\n"
               << "-r:   learning rate       [saved value]\n"
               << "-m:   momentum            [saved value]\n"
-              << "-d:   learning rate decay [saved value]\n";
+              << "-d:   learning rate decay [saved value]\n"
+              << "-g:   output noise        [saved value]\n";
     exit(1);
 }
 
