@@ -32,5 +32,8 @@ trump1: trump1.o lib/text_mapper.o lib/rng.o lib/lstm.o lib/read_data.o
 lib/%.o: lib/%.cpp lib/*.h
 	$(CXX) $(CXXFLAGS) $< -o $@ 
 
+%.o: %.cpp lib/*.h
+	$(CXX) $(CXXFLAGS) $< -o $@ 
+	
 clean: 
-	rm -f lib/*.o trump1
+	rm -f lib/*.o *.o trump1

@@ -30,12 +30,9 @@ outfile &outfile::operator<<(const Matrix &m)
     for (int row = 0; row < m.rows(); ++row)
     {
         out << row_sep << '[';
-        if (m.cols())
-        {
-            out << m(row, 0);
-            for (int col = 0; col < m.cols(); ++col)
-                out << ',' << m(row, col);
-        }
+        out << m(row, 0);
+        for (int col = 1; col < m.cols(); ++col)
+            out << ',' << m(row, col);
         out << ']';
         row_sep = ",\n";
     }
@@ -45,14 +42,11 @@ outfile &outfile::operator<<(const Matrix &m)
 
 outfile &outfile::operator<<(const Vector &v)
 {
-    out << "new Matrix([";
-    std::string sep = "";
-    for (int i = 0; i < v.size(); ++i)
-    {
-        out << sep << v[i];
-        sep = ", ";
-    }
-    out << "])";
+    out << "new Matrix([" << v[0];
+    for (int i = 1; i < v.size(); ++i)
+        out << ',' << v[i];
+
+    out << "]).trans()";
     return *this;
 }
 
