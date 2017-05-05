@@ -9,6 +9,7 @@
 #include "text_mapper.h"
 #include "rng.h"
 #include "optimize.h"
+#include "js.h"
 
 void init(const int epochs,          // -E
           const int seq_length,      // -s
@@ -35,10 +36,13 @@ void sample(const int n,       // -n
             const double temp, // -t
             const std::string &checkpoint_file, const std::string &data_file);
 
+void export_js(const std::string &checkpoint_file, const std::string &data_file, const std::string &output_file);
+
 void print_usage(const char *execname);
 void print_usage_init(const char *execname);
 void print_usage_train(const char *execname);
 void print_usage_sample(const char *execname);
+void print_usage_export(const char *execname);
 
 //
 // main
@@ -238,6 +242,15 @@ int main(int argc, char **argv)
         std::string checkpoint_file = argv[argc - 2];
         std::string data_file = argv[argc - 1];
         sample(n, temp, checkpoint_file, data_file);
+    }
+    else if (cmd == "export")
+    {
+        if (argc < 5)
+            print_usage_export(argv[0]);
+        std::string checkpoint_file = argv[argc - 3];
+        std::string data_file = argv[argc - 2];
+        std::string output_file = argv[argc - 1];
+        export_js(checkpoint_file, data_file, output_file);
     }
     else
     {
@@ -741,6 +754,75 @@ void sample(const int n, const double temp, const std::string &checkpoint_file, 
     }
 }
 
+void export_js(const std::string &checkpoint_file, const std::string &data_file, const std::string &output_file)
+{
+    std::vector<std::string *> input_data = read_data(data_file);
+    if (input_data.empty())
+    {
+        std::cerr << "no input\n";
+        exit(1);
+    }
+    TextMapper mapper(input_data);
+    uint32_t num_input = mapper.num_classes();
+    uint32_t num_output = mapper.num_classes();
+    int _i;
+    double _f;
+    int num_cells;
+
+    int epoch;
+    int file;
+    std::vector<int> order;
+
+    Layer L1;
+    Layer L2;
+    Layer L3;
+    Matrix Wyh;
+    Vector by;
+
+    std::cout << "load\n";
+    checkpoint::load(checkpoint_file,
+                     // static data - we just need num_cells
+                     _i,
+                     _i,
+                     _f,
+                     _f,
+                     _f,
+                     _f,
+                     num_cells,
+
+                     // current iteration - don't need this
+                     _i,
+                     _i,
+                     order,
+
+                     // params - still need these
+                     L1.W, L1.b,
+                     L2.W, L2.b,
+                     L3.W, L3.b,
+                     Wyh, by);
+    js::outfile out(output_file);
+
+    out << "let num_cells = " << num_cells << ";\n"
+        << "let num_input = " << num_input << ";\n"
+        << "let num_output = " << num_output << ";\n"
+        << "\n"
+        << "let encoder = ";
+    char sep = '[';
+    for (int i = 0; i < num_input; ++i)
+    {
+        out << sep << (int)mapper.encode(i);
+        sep = ',';
+    }
+    out << "];\n"
+        << "let decoder = ";
+    sep = '[';
+    for (int i = 0; i < num_input; ++i)
+    {
+        out << sep << mapper.decode(i);
+        sep = ',';
+    }
+}
+
 //
 //
 // PRINT USAGE
@@ -750,7 +832,8 @@ void print_usage(const char *execname)
     std::cerr << "usage:\n"
               << execname << " init -esrmdn checkpoint_file data_file\n"
               << execname << " train checkpoint_file data_file\n"
-              << execname << " sample checkpoint_file data_file\n";
+              << execname << " sample checkpoint_file data_file\n"
+              << execname << " export checkpoint_file data_file output_file\n";
     exit(1);
 }
 
@@ -789,5 +872,11 @@ void print_usage_sample(const char *execname)
               << "flag  option              default\n"
               << "-n:   number of bytes     1024\n"
               << "-t:   softmax temperature 1.0\n";
+    exit(1);
+}
+
+void print_usage_export(const char *execname)
+{
+    std::cerr << "usage: " << execname << " export checkpoint_file data_file output_file\n";
     exit(1);
 }
