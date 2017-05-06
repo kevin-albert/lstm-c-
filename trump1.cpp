@@ -73,7 +73,7 @@ int main(int argc, char **argv)
         double rate_decay = 0.975;
         double output_noise = 0.01;
         int num_cells = 100;
-        while ((c = getopt(argc - 1, argv + 1, "E:s:r:m:d:n:")) != -1)
+        while ((c = getopt(argc - 1, argv + 1, "E:s:r:m:d:g:n:")) != -1)
         {
             switch (c)
             {
@@ -101,6 +101,9 @@ int main(int argc, char **argv)
                 break;
             case 'd':
                 rate_decay = std::stod(optarg);
+                break;
+            case 'g':
+                output_noise = std::stod(optarg);
                 break;
             case 'n':
                 num_cells = std::stoi(optarg);
@@ -152,7 +155,7 @@ int main(int argc, char **argv)
         double rate_decay_override = -1;
         double output_noise_override = -1;
 
-        while ((c = getopt(argc - 1, argv + 1, "e:f:E:s:r:m:d:n:")) != -1)
+        while ((c = getopt(argc - 1, argv + 1, "e:f:E:s:r:m:d:g:n:")) != -1)
         {
             switch (c)
             {
@@ -744,11 +747,17 @@ void sample(const int n, const double temp, const std::string &checkpoint_file, 
     for (int i = 0; i < n; ++i)
     {
         mapper.to_onehot(c, x);
+        std::cout << "x: " << x.transpose() << "\n\n";
         lstm_forwardpass(L1, state1, x, state1);
+        std::cout << "h1: " << lstm_output(state1).transpose() << "\n\n";
         lstm_forwardpass(L2, state2, lstm_output(state1), state2);
+        std::cout << "h2: " << lstm_output(state2).transpose() << "\n\n";
         lstm_forwardpass(L3, state3, lstm_output(state2), state3);
+        std::cout << "h3: " << lstm_output(state3).transpose() << "\n\n";
         y = (Wyh * lstm_output(state3) + by) * temp;
+        std::cout << "y: " << y.transpose() << "\n\n";
         softmax_activation(y, p);
+        std::cout << "p: " << p.transpose() << "\n\n";
         c = mapper.from_dist(p);
         std::cout << c;
     }
@@ -801,13 +810,14 @@ void export_js(const std::string &checkpoint_file, const std::string &data_file,
                      Wyh, by);
     js::outfile out(output_file);
 
-    out << "function lstmInit(Matrix) {\n"
-        << "  var lstm = {};\n"
-        << "  lstm.num_cells = " << num_cells << ";\n"
-        << "  lstm.num_input = " << num_input << ";\n"
-        << "  lstm.num_output = " << num_output << ";\n"
+    out << "var la = linearAlgebra();\n"
+        << "var Matrix = la.Matrix;\n"
+        << "var Vector = la.Vector;\n"
+        << "var num_cells = " << num_cells << ";\n"
+        << "var num_input = " << num_input << ";\n"
+        << "var num_output = " << num_output << ";\n"
         << "\n"
-        << "  lstm.encoder = ";
+        << "var encoder = ";
     char sep = '[';
     for (int i = 0; i < num_input; ++i)
     {
@@ -815,7 +825,7 @@ void export_js(const std::string &checkpoint_file, const std::string &data_file,
         sep = ',';
     }
     out << "];\n"
-        << "  lstm.decoder = ";
+        << "var decoder = ";
     sep = '[';
     for (int i = 0; i < num_input; ++i)
     {
@@ -823,25 +833,25 @@ void export_js(const std::string &checkpoint_file, const std::string &data_file,
         sep = ',';
     }
     out << "];\n"
-        << "  lstm.encode = function(c) { return lstm.encoder[c.charCodeAt(0)]; }\n"
-        << "  lstm.decode = function(i) { return String.fromCharCode(lstm.decoder[i]); }\n"
+        << "var encode = function(c) { return encoder[c.charCodeAt(0)]; }\n"
+        << "var decode = function(i) { return String.fromCharCode(decoder[i]); }\n"
         << "\n"
-        << "  lstm.L1 = {\n"
-        << "    W: " << L1.W << ",\n"
-        << "    b: " << L1.b << "\n"
-        << "  };\n"
-        << "  lstm.L2 = {\n"
-        << "    W: " << L2.W << ",\n"
-        << "    b: " << L2.b << "\n"
-        << "  };\n"
-        << "  lstm.L3 = {\n"
-        << "    W: " << L3.W << ",\n"
-        << "    b: " << L3.b << "\n"
-        << "  };\n"
-        << "  lstm.Wyh = " << Wyh << "\n"
-        << "  lstm.by = " << by << "\n"
-        << "  return lstm;\n"
-        << "}";
+        << "var L1 = {\n"
+        << "  W: " << L1.W << ",\n"
+        << "  b: " << L1.b << "\n"
+        << "};\n"
+        << "var L2 = {\n"
+        << "  W: " << L2.W << ",\n"
+        << "  b: " << L2.b << "\n"
+        << "};\n"
+        << "var L3 = {\n"
+        << "  W: " << L3.W << ",\n"
+        << "  b: " << L3.b << "\n"
+        << "};\n"
+        << "var Wyh = " << Wyh << ";\n"
+        << "var by = " << by << ";\n"
+        << "\n"
+        << "";
 }
 
 //

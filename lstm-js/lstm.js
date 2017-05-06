@@ -1,59 +1,45 @@
-var la = linearAlgebra(),
-    Matrix = la.Matrix,
-    Vector = la.Vector;
+var S1 = Vector.zero(num_cells * 6);
+var S2 = Vector.zero(num_cells * 6);
+var S3 = Vector.zero(num_cells * 6);
 
-var lstm = lstmInit(Matrix);
-var S1 = Vector.zero(lstm.num_cells * 6);
-var S2 = Vector.zero(lstm.num_cells * 6);
-var S3 = Vector.zero(lstm.num_cells * 6);
+var c = '^';
 
+function sample(t) {
 
-function sample(n, t) {
-
-    var c = '^';
+    var limit = 280;
     var output = '';
-    while (n > 0) {
+    while (1) {
         c = forwardpass(c, t);
-        console.log(c);
+        if (c == '^' || --limit == 0) break;
         output += c;
-        --n;
     }
 
     return output;
 
     function toOneHot(c) {
-        var v = Vector.zero(lstm.num_input);
-        v.data[0][lstm.encode(c)] = 1;
+        var v = Vector.zero(num_input);
+        v.data[0][encode(c)] = 1;
         return v.trans();
-    }
-
-    function fromOneHot(a) {
-        var max = 0;
-        var data = a.trans().toArray();
-        for (var i = 1; i < data.length; ++i) {
-            if (data[i] > data[max]) max = i;
-        }
-        return lstm.decode(max);
     }
 
     function fromDist(p) {
         var rand = Math.random();
-        var a = p.trans().toArray();
-        for (var i = 0; i < a; ++i) {
+        var a = p.trans().toArray()[0];
+        for (var i = 0; i < a.length; ++i) {
             rand -= a[i];
             if (rand <= 0) {
-                return lstm.decode(i);
+                return decode(i);
             }
         }
-        return lstm.decode(a.length);
+        return decode(a[a.length]);
     }
 
     function forwardpass(c, t) {
         var x = toOneHot(c);
-        var h1 = forwardpassLayer(x, lstm.L1, S1, lstm.num_cells);
-        var h2 = forwardpassLayer(h1, lstm.L2, S2, lstm.num_cells);
-        var h3 = forwardpassLayer(h2, lstm.L3, S3, lstm.num_cells);
-        var y = lstm.Wyh.dot(h3).plus(lstm.by);
+        var h1 = forwardpassLayer(x, L1, S1, num_cells);
+        var h2 = forwardpassLayer(h1, L2, S2, num_cells);
+        var h3 = forwardpassLayer(h2, L3, S3, num_cells);
+        var y = Wyh.dot(h3).plus(by);
         var p = y.mulEach(t).map(Math.exp);
         return fromDist(p.mulEach(1 / p.getSum()));
     }
@@ -101,4 +87,34 @@ function sample(n, t) {
     }
 }
 
-console.log(sample(140, 1.5));
+function reset() {
+    S1 = Vector.zero(num_cells * 6);
+    S2 = Vector.zero(num_cells * 6);
+    S3 = Vector.zero(num_cells * 6);
+}
+
+self.addEventListener('message', function (e) {
+    var data = e.data;
+    if (typeof data == 'string')
+        data = JSON.parse(data);
+
+    switch (data.cmd) {
+        case 'sample':
+            console.log('sample ' + data.t);
+            var t = typeof data.t == 'number' ? data.t : 1.5;
+            let tweet = '';
+            while (tweet.trim().length < 3) {
+                tweet = sample(t);
+            }
+            self.postMessage(tweet);
+            break;
+        case 'reset':
+            console.log('reset');
+            reset();
+            break;
+        default:
+            console.error('wat', data);
+            break;
+    }
+    var s = sample(e.t);
+}, false);

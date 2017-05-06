@@ -1,6 +1,5 @@
 *.o
-main
-main.dSYM/
+trump1
 
 node_modules/
 npm-debug.log

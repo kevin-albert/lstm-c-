@@ -20,10 +20,10 @@ LDFLAGS	= -llapack -lblas -fopenmp -mfma -framework Accelerate -Wa,-q \
 
 
 # XXX for dev, compiles faster
-CXX = g++-6
-CXXFLAGS= -O2 --std=c++17 -c -I./lib
-LD  = g++-6
-LDFLAGS	= 
+#CXX = g++-6
+#CXXFLAGS= -O2 --std=c++17 -c -I./lib
+#LD  = g++-6
+#LDFLAGS	= 
 
 
 trump1: trump1.o lib/text_mapper.o lib/rng.o lib/lstm.o lib/read_data.o 
