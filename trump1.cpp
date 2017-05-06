@@ -708,7 +708,6 @@ void sample(const int n, const double temp, const std::string &checkpoint_file, 
     Matrix Wyh;
     Vector by;
 
-    std::cout << "load\n";
     checkpoint::load(checkpoint_file,
                      // static data - we just need num_cells
                      _i,
@@ -747,17 +746,11 @@ void sample(const int n, const double temp, const std::string &checkpoint_file, 
     for (int i = 0; i < n; ++i)
     {
         mapper.to_onehot(c, x);
-        std::cout << "x: " << x.transpose() << "\n\n";
         lstm_forwardpass(L1, state1, x, state1);
-        std::cout << "h1: " << lstm_output(state1).transpose() << "\n\n";
         lstm_forwardpass(L2, state2, lstm_output(state1), state2);
-        std::cout << "h2: " << lstm_output(state2).transpose() << "\n\n";
         lstm_forwardpass(L3, state3, lstm_output(state2), state3);
-        std::cout << "h3: " << lstm_output(state3).transpose() << "\n\n";
         y = (Wyh * lstm_output(state3) + by) * temp;
-        std::cout << "y: " << y.transpose() << "\n\n";
         softmax_activation(y, p);
-        std::cout << "p: " << p.transpose() << "\n\n";
         c = mapper.from_dist(p);
         std::cout << c;
     }
