@@ -12,9 +12,10 @@
 
     lstmWorker.addEventListener('message', function (e) {
       working = false;
-      console.log('tweet', e.data);
-      document.querySelector('#twitter-widget-0').shadowRoot.querySelector(
-        'div > blockquote > div.Tweet-body.e-entry-content').innerHTML = formatTweet(e.data);
+      var tweet = formatTweet(e.data);
+      console.log('tweet', tweet);
+      document.querySelector('#twitter-widget-0').shadowRoot
+        .querySelector('div > blockquote > div.Tweet-body.e-entry-content').innerHTML = tweet;
       if (pending !== undefined) {
         sample(pending);
         pending = undefined;
