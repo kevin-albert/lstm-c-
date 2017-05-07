@@ -525,6 +525,32 @@ void train(const int from_epoch,               // -e
                         states3[i] = lstm_state(num_cells);
                     }
                     total_bytes = 0;
+                    checkpoint::save(checkpoint_file,
+                                     // static data, hyperparams
+                                     epochs,
+                                     seq_length,
+                                     rate,
+                                     momentum,
+                                     rate_decay,
+                                     output_noise,
+                                     num_cells,
+
+                                     // current iteration
+                                     epoch,
+                                     file,
+                                     order,
+
+                                     // params
+                                     L1.W, L1.b,
+                                     L2.W, L2.b,
+                                     L3.W, L3.b,
+                                     Wyh, by,
+
+                                     // momentum
+                                     M1.W, M1.b,
+                                     M2.W, M2.b,
+                                     M3.W, M3.b,
+                                     mWyh, my);
                 }
 
                 int seq_end = seq_offset + seq_length;
