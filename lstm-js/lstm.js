@@ -40,7 +40,7 @@ function sample(t) {
         var h2 = forwardpassLayer(h1, L2, S2, num_cells);
         var h3 = forwardpassLayer(h2, L3, S3, num_cells);
         var y = Wyh.dot(h3).plus(by);
-        var p = y.mulEach(t).map(Math.exp);
+        var p = y.mulEach(1/t).map(Math.exp);
         return fromDist(p.mulEach(t / p.getSum()));
     }
 

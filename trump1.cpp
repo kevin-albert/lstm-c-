@@ -775,7 +775,7 @@ void sample(const int n, const double temp, const std::string &checkpoint_file, 
         lstm_forwardpass(L1, state1, x, state1);
         lstm_forwardpass(L2, state2, lstm_output(state1), state2);
         lstm_forwardpass(L3, state3, lstm_output(state2), state3);
-        y = (Wyh * lstm_output(state3) + by) * temp;
+        y = (Wyh * lstm_output(state3) + by) / temp;
         softmax_activation(y, p);
         c = mapper.from_dist(p);
         std::cout << c;
