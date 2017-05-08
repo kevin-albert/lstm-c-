@@ -3,6 +3,8 @@
 
 <head>
   <meta charset="utf8" />
+  <link rel="stylesheet" href="https://platform.twitter.com/css/tweet.47359d5d242896bda2cc281f2ebbcd72.light.ltr.css" type="text/css"
+  />
   <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
     crossorigin="anonymous"></script>
   <script type="text/javascript">
@@ -14,44 +16,37 @@
       var pending = undefined;
 
       lstmWorker.addEventListener('message', function (e) {
-        working = false;
         if (document.querySelector('#twitter-widget-0')) {
-          var root = document.querySelector('#twitter-widget-0').shadowRoot;
-          var container = root.querySelector('div');
-          // second-to-last div
-          var last = container.children[container.children.length - 2];
-          $(last).css('border-radius', '0px');
-          if (container.children.length > 2) $(last).css('border-top', '0');
-          var next = last.cloneNode(true);
-          $(next).css('border-top', '0');
-          next.querySelector('div > blockquote > div.Tweet-body.e-entry-content').innerHTML = formatTweet(e.data);
-          $(next).hide().fadeIn(400)
-          container.insertBefore(next, container.children[container.children.length - 1]);
-        }
-        if (pending !== undefined) {
-          sample(pending);
-          pending = undefined;
-        } else {
-          fillWindow();
+          var container = $('#tweet-container');
+          var node = $('.next-tweet');
+          var next = node.clone();
+          next.css('border-top', 0);
+          var content = $('.next-tweet > div > blockquote > div.Tweet-body.e-entry-content');
+
+          node.removeClass('next-tweet');
+          content.fadeOut(400, function () {
+            content.html(formatTweet(e.data)).fadeIn(400, function () {
+              container.append(next.fadeIn(400));
+              working = false;
+              if (pending !== undefined) {
+                sample(pending);
+                pending = undefined;
+              } else {
+                fillWindow();
+              }
+            });
+          });
         }
       }, false);
 
-      function slider(t) {
-        $('#temp').text(t);
-      }
-
       function sample(t) {
-        if (t === undefined) {
-          t = $('#slide').val();
-        }
-        t = Number(t);
         if (working) {
           pending = t;
         } else {
           working = true;
           lstmWorker.postMessage({
             cmd: 'sample',
-            t: t
+            t: Number(t)
           });
         }
       }
@@ -67,7 +62,7 @@
       }
 
       function fillWindow() {
-        if (pending === undefined && $(window).height() + $(window).scrollTop() > $('.rapper').height() - 200) {
+        if (pending === undefined && $(window).height() + $(window).scrollTop() > $('.rapper').height() - 100) {
           sample(Math.random() * 0.6 + 0.1);
         }
       }
@@ -80,19 +75,45 @@
 
 <body class="text-align: center">
   <div class="rapper" style="margin: auto; max-width: 100%; width: 500px">
-    <blockquote class="twitter-tweet" data-lang="en">
-      <p lang="en" dir="ltr">My twitter has become so powerful that I can actually make my enemies tell the truth.</p>&mdash; Donald J. Trump (@realDonaldTrump)
-      <a href="https://twitter.com/realDonaldTrump/status/258584864163500033">October 17, 2012</a></blockquote>
-    <script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
-    <div class="loader" style="margin-top: 40px; width: 100%; text-align: center">
-      <img src="loader.gif"/>
+    <div id="tweet-container" data-twitter-event-id="0" class="SandboxRoot env-bp-350" style="position: relative;">
+      <div class="next-tweet EmbeddedTweet js-clickToOpenTarget tweet-InformationCircle-widgetParent" data-click-to-open-target="https://twitter.com/realDonaldTrump/status/258584864163500033"
+        data-iframe-title="Twitter Tweet" data-dt-full="%{hours12}:%{minutes} %{amPm} - %{day} %{month} %{year}" data-dt-months="Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec"
+        data-dt-am="AM" data-dt-pm="PM" data-dt-now="now" data-dt-s="s" data-dt-m="m" data-dt-h="h" data-dt-second="second"
+        data-dt-seconds="seconds" data-dt-minute="minute" data-dt-minutes="minutes" data-dt-hour="hour" data-dt-hours="hours"
+        data-dt-abbr="%{number}%{symbol}" data-dt-short="%{day} %{month}" data-dt-long="%{day} %{month} %{year}" data-scribe="page:tweet"
+        id="twitter-widget-0" lang="en" data-twitter-event-id="1" style="border-radius: 0px;">
+        <div class="EmbeddedTweet-tweet">
+          <blockquote class="Tweet h-entry js-tweetIdInfo subject expanded
+                   is-deciderHtmlWhitespace" cite="https://twitter.com/realDonaldTrump/status/258584864163500033" data-tweet-id="258584864163500033"
+            data-scribe="section:subject">
+            <div class="Tweet-header u-cf">
+              <div class="Tweet-brand u-floatRight">
+                <span class="u-hiddenInNarrowEnv">
+<a class="FollowButton follow-button profile" data-scribe="component:followbutton" href="https://twitter.com/realDonaldTrump" role="button" title="Follow Donald J. Trump on Twitter"><span class="FollowButton-bird"><div class="Icon Icon--twitter " aria-label="" title="" role="presentation"></div></span>                Follow</a>
+                </span>
+                <span class="u-hiddenInWideEnv"><a href="https://twitter.com/download" data-scribe="element:logo"><div class="Icon Icon--twitter " aria-label="Get Twitter app" title="Get Twitter app" role="img"></div></a></span>
+              </div>
+              <div class="TweetAuthor " data-scribe="component:author">
+                <a class="TweetAuthor-link Identity u-linkBlend" data-scribe="element:user_link" href="https://twitter.com/realDonaldTrump"
+                  aria-label="Donald J. Trump (screen name: realDonaldTrump)">
+                  <span class="TweetAuthor-avatar Identity-avatar">
+      <img class="Avatar" data-scribe="element:avatar" data-src-2x="https://pbs.twimg.com/profile_images/1980294624/DJT_Headshot_V2_bigger.jpg" alt="" data-src-1x="https://pbs.twimg.com/profile_images/1980294624/DJT_Headshot_V2_normal.jpg" src="https://pbs.twimg.com/profile_images/1980294624/DJT_Headshot_V2_bigger.jpg">
+    </span>
+                  <span class="TweetAuthor-name Identity-name customisable-highlight" title="Donald J. Trump" data-scribe="element:name">Donald J. Trump</span>
+                  <span class="TweetAuthor-verifiedBadge" data-scribe="element:verified_badge"><div class="Icon Icon--verified " aria-label="Verified Account" title="Verified Account" role="img"></div><b class="u-hiddenVisually">✔</b></span>
+                  <span class="TweetAuthor-screenName Identity-screenName" title="@realDonaldTrump" data-scribe="element:screen_name" dir="ltr">@realDonaldTrump</span>
+                </a>
+              </div>
+            </div>
+            <div class="Tweet-body e-entry-content" data-scribe="component:tweet">
+              <div class="loader" style="width: 100%; text-align: center">
+                <img src="loader.gif" />
+              </div>
+            </div>
+          </blockquote>
+        </div>
+      </div>
     </div>
-
-    <!--<div style="width: 100%; margin: 40px 0">
-      Adjust softmax (<span id="temp">0.25</span>)<br>
-      <input style="width: 100%" id="slide" type="range" min="0.01" max="1" step="0.001" value="0.25" oninput="slider(this.value)"
-        onchange="sample(this.value)" />
-    </div>-->
   </div>
 
 </body>
