@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf8" />
-  <script src="http://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
     crossorigin="anonymous"></script>
   <script type="text/javascript">
     $(document).ready(function () {
@@ -15,19 +15,19 @@
 
       lstmWorker.addEventListener('message', function (e) {
         working = false;
-        if (!document.querySelector('#twitter-widget-0')) return;
-        var root = document.querySelector('#twitter-widget-0').shadowRoot;
-        var container = root.querySelector('div');
-        // second-to-last div
-        var last = container.children[container.children.length - 2];
-        $(last).css('border-radius', '0px');
-        if (container.children.length > 2) $(last).css('border-top', '0');
-        var next = last.cloneNode(true);
-        $(next).css('border-top', '0');
-        next.querySelector('div > blockquote > div.Tweet-body.e-entry-content').innerHTML = formatTweet(e.data);
-        $(next).hide().fadeIn(400)
-        container.insertBefore(next, container.children[container.children.length - 1]);
-
+        if (document.querySelector('#twitter-widget-0')) {
+          var root = document.querySelector('#twitter-widget-0').shadowRoot;
+          var container = root.querySelector('div');
+          // second-to-last div
+          var last = container.children[container.children.length - 2];
+          $(last).css('border-radius', '0px');
+          if (container.children.length > 2) $(last).css('border-top', '0');
+          var next = last.cloneNode(true);
+          $(next).css('border-top', '0');
+          next.querySelector('div > blockquote > div.Tweet-body.e-entry-content').innerHTML = formatTweet(e.data);
+          $(next).hide().fadeIn(400)
+          container.insertBefore(next, container.children[container.children.length - 1]);
+        }
         if (pending !== undefined) {
           sample(pending);
           pending = undefined;
