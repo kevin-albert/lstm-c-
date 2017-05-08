@@ -3,8 +3,7 @@
 
 <head>
   <meta charset="utf8" />
-  <link rel="stylesheet" href="https://platform.twitter.com/css/tweet.47359d5d242896bda2cc281f2ebbcd72.light.ltr.css" type="text/css"
-  />
+  <link rel="stylesheet" href="tweet.47359d5d242896bda2cc281f2ebbcd72.light.ltr.css" type="text/css" />
   <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
     crossorigin="anonymous"></script>
   <script type="text/javascript">
@@ -16,26 +15,32 @@
       var pending = undefined;
 
       lstmWorker.addEventListener('message', function (e) {
-        if (document.querySelector('#twitter-widget-0')) {
-          var container = $('#tweet-container');
-          var node = $('.next-tweet');
-          var next = node.clone();
-          next.css('border-top', 0);
-          var content = $('.next-tweet > div > blockquote > div.Tweet-body.e-entry-content');
+        switch (e.data.event) {
+          case 'tweet':
+            var container = $('#tweet-container');
+            var node = $('.next-tweet');
+            var next = node.clone();
+            next.css('border-top', 0);
+            var content = $('.next-tweet > div > blockquote > div.Tweet-body.e-entry-content');
 
-          node.removeClass('next-tweet');
-          content.fadeOut(400, function () {
-            content.html(formatTweet(e.data)).fadeIn(400, function () {
-              container.append(next.fadeIn(400));
-              working = false;
-              if (pending !== undefined) {
-                sample(pending);
-                pending = undefined;
-              } else {
-                fillWindow();
-              }
+            node.removeClass('next-tweet');
+            content.fadeOut(400, function () {
+              content.html(formatTweet(e.data)).fadeIn(400, function () {
+                container.append(next.fadeIn(400));
+                working = false;
+                if (pending !== undefined) {
+                  sample(pending);
+                  pending = undefined;
+                } else {
+                  fillWindow();
+                }
+              });
             });
-          });
+            break;
+          case 'ready':
+            $('.network-loading').fadeOut(400, function () {
+              $('.rapper').fadeIn(400);
+            });
         }
       }, false);
 
@@ -74,7 +79,8 @@
 </head>
 
 <body class="text-align: center">
-  <div class="rapper" style="margin: auto; max-width: 100%; width: 500px">
+  <div class="network-loading" style="font-family: Helvetica, Roboto, sans-serif; color: #1c2022; font-size: 16px;">Initializing 1,526,438 network parameters (This may take a minute)</div>
+  <div style="display: none" class="rapper" style="margin: auto; max-width: 100%; width: 500px">
     <div id="tweet-container" data-twitter-event-id="0" class="SandboxRoot env-bp-350" style="position: relative;">
       <div class="next-tweet EmbeddedTweet js-clickToOpenTarget tweet-InformationCircle-widgetParent" data-click-to-open-target="https://twitter.com/realDonaldTrump/status/258584864163500033"
         data-iframe-title="Twitter Tweet" data-dt-full="%{hours12}:%{minutes} %{amPm} - %{day} %{month} %{year}" data-dt-months="Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec"
