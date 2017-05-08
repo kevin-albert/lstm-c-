@@ -24,13 +24,14 @@
             var container = $('#tweet-container');
             var node = $('.next-tweet');
             var next = node.clone();
-            next.css('border-top', 0);
+            var nextHeight = node.height();
+            next.css('border-bottom', 0);
             var content = $('.next-tweet > div > blockquote > div.Tweet-body.e-entry-content');
 
             node.removeClass('next-tweet');
             content.fadeOut(400, function () {
               content.html(formatTweet(message.data)).fadeIn(400, function () {
-                container.append(next.fadeIn(400));
+                container.prepend(next.css('top', '-'+nextHeight+'px').css('margin-bottom', '-'+nextHeight+'px').animate({marginBottom: 0,top:0}, 400));
                 working = false;
                 if (pending !== undefined) {
                   sample(pending);
@@ -71,8 +72,8 @@
       }
 
       function fillWindow() {
-        if (pending === undefined && $(window).height() + $(window).scrollTop() > $('.rapper').height() - 100) {
-          sample(Math.random() * 0.9 + 0.1);
+        if (pending === undefined && ($(window).height() > $('rapper').height()) || $(window).scrollTop() < 100) {
+          sample(Math.random() * 0.9 + 0.2);
         }
       }
 
