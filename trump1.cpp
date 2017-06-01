@@ -175,6 +175,14 @@ int main(int argc, char **argv)
                     exit(1);
                 }
                 break;
+            case 'E':
+                epochs_override = std::stoi(optarg);
+                if (epochs_override <= 0)
+                {
+                    std::cerr << "epochs must be > 0\n";
+                    exit(1);
+                }
+                break;
             case 's':
                 seq_length_override = std::stoi(optarg);
                 if (seq_length_override <= 0)
@@ -464,6 +472,8 @@ void train(const int from_epoch,               // -e
         epoch = from_epoch;
     if (from_file >= 0)
         file = from_file;
+    if (epochs_override >= 0)
+        epochs = epochs_override;
     if (seq_length_override >= 0)
         seq_length = seq_length_override;
     if (rate_override >= 0)
