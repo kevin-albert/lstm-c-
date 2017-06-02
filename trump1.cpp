@@ -17,6 +17,7 @@ void init(const int epochs,          // -E
           const double momentum,     // -m
           const double rate_decay,   // -d
           const double output_noise, // -g
+          const double dropout,      // -D
           const int num_cells,       // -n
           const std::string &checkpoint_file,
           const std::string &data_file);
@@ -29,6 +30,7 @@ void train(const int from_epoch,               // -e
            const double momentum_override,     // -m
            const double rate_decay_override,   // -d
            const double output_noise_override, // -g
+           const double dropout_override,      // -D
            const std::string &checkpoint_file,
            const std::string &data_file);
 
@@ -72,8 +74,9 @@ int main(int argc, char **argv)
         double momentum = 0.9;
         double rate_decay = 0.975;
         double output_noise = 0.01;
+        double dropout = 0.4;
         int num_cells = 100;
-        while ((c = getopt(argc - 1, argv + 1, "E:s:r:m:d:g:n:")) != -1)
+        while ((c = getopt(argc - 1, argv + 1, "E:s:r:m:d:g:D:n:")) != -1)
         {
             switch (c)
             {
@@ -105,6 +108,9 @@ int main(int argc, char **argv)
             case 'g':
                 output_noise = std::stod(optarg);
                 break;
+            case 'D':
+                dropout = std::stod(optarg);
+                break;
             case 'n':
                 num_cells = std::stoi(optarg);
                 if (num_cells <= 0)
@@ -126,6 +132,7 @@ int main(int argc, char **argv)
                   << "momentum              " << momentum << "\n"
                   << "learning rate decay   " << rate_decay << "\n"
                   << "output noise          " << output_noise << "\n"
+                  << "dropout rate          " << dropout << "\n"
                   << "hidden layer size     " << num_cells << "\n";
         init(epochs,
              seq_length,
@@ -133,6 +140,7 @@ int main(int argc, char **argv)
              momentum,
              rate_decay,
              output_noise,
+             dropout,
              num_cells,
              checkpoint_file,
              data_file);
@@ -154,8 +162,9 @@ int main(int argc, char **argv)
         double momentum_override = -1;
         double rate_decay_override = -1;
         double output_noise_override = -1;
+        double dropout_override = -1;
 
-        while ((c = getopt(argc - 1, argv + 1, "e:f:E:s:r:m:d:g:n:")) != -1)
+        while ((c = getopt(argc - 1, argv + 1, "e:f:E:s:r:m:d:g:D:n:")) != -1)
         {
             switch (c)
             {
@@ -203,6 +212,9 @@ int main(int argc, char **argv)
             case 'g':
                 output_noise_override = std::stod(optarg);
                 break;
+            case 'D':
+                dropout_override = std::stod(optarg);
+                break;
             case '?':
                 print_usage_init(argv[0]);
             default:
@@ -218,6 +230,7 @@ int main(int argc, char **argv)
               momentum_override,
               rate_decay_override,
               output_noise_override,
+              dropout_override,
               checkpoint_file,
               data_file);
     }
@@ -281,6 +294,7 @@ void init(const int epochs,          // -e
           const double momentum,     // -m
           const double rate_decay,   // -d
           const double output_noise, // -g
+          const double dropout,      // -D
           const int num_cells,       // -n
           const std::string &checkpoint_file,
           const std::string &data_file)
@@ -331,6 +345,7 @@ void init(const int epochs,          // -e
                      momentum,
                      rate_decay,
                      output_noise,
+                     dropout,
                      num_cells,
 
                      // current iteration
@@ -368,6 +383,7 @@ void train(const int from_epoch,               // -e
            const double momentum_override,     // -m
            const double rate_decay_override,   // -d
            const double output_noise_override, // -g
+           const double dropout_override,      // -D
            const std::string &checkpoint_file,
            const std::string &data_file)
 {
@@ -390,6 +406,7 @@ void train(const int from_epoch,               // -e
     double momentum;
     double rate_decay;
     double output_noise;
+    double dropout;
 
     int epoch;
     int file;
@@ -416,6 +433,7 @@ void train(const int from_epoch,               // -e
                      momentum,
                      rate_decay,
                      output_noise,
+                     dropout,
                      num_cells,
 
                      // current iteration
@@ -484,6 +502,8 @@ void train(const int from_epoch,               // -e
         rate_decay = rate_decay_override;
     if (output_noise_override >= 0)
         output_noise = output_noise_override;
+    if (dropout_override >= 0)
+        dropout = dropout_override;
 
     std::cout << "Training with settings:\n"
               << "epochs                " << epochs << "\n"
@@ -492,6 +512,7 @@ void train(const int from_epoch,               // -e
               << "momentum              " << momentum << "\n"
               << "learning rate decay   " << rate_decay << "\n"
               << "output noise          " << output_noise << "\n"
+              << "dropout rate          " << dropout << "\n"
               << "hidden layer size     " << num_cells << "\n"
               << "input/output size     " << mapper.num_classes() << "\n";
 
@@ -907,6 +928,7 @@ void print_usage_init(const char *execname)
               << "-m:   momentum            0.9\n"
               << "-d:   learning rate decay 0.975\n"
               << "-g:   output noise        0.01\n"
+              << "-D:   dropout rate        0.4\n"
               << "-n:   cells per layer     100\n";
     exit(1);
 }
@@ -922,7 +944,8 @@ void print_usage_train(const char *execname)
               << "-r:   learning rate       [saved value]\n"
               << "-m:   momentum            [saved value]\n"
               << "-d:   learning rate decay [saved value]\n"
-              << "-g:   output noise        [saved value]\n";
+              << "-g:   output noise        [saved value]\n"
+              << "-D:   dropout rate        [saved value]\n";
     exit(1);
 }
 
